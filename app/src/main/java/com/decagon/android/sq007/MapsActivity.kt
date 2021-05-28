@@ -12,9 +12,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.android.gms.common.api.PendingResult
-import com.google.android.gms.common.api.ResultCallback
-import com.google.android.gms.common.api.Status
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -46,19 +43,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         databaseRef= FirebaseDatabase.getInstance().reference
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
         databaseRef.addValueEventListener(logListener)
 
 
 
     }
 
-
+    //Getting location permission
     private fun getLocationAccess() {
         if (ContextCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             map.isMyLocationEnabled = true
-
-
         }
         else
             ActivityCompat.requestPermissions(
@@ -68,6 +62,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             )
     }
 
+    //Show alert dialog
     fun showSettingAlert() {
 
             val alertDialog: AlertDialog.Builder = AlertDialog.Builder(this)
@@ -84,29 +79,20 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
+    //permission request
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray
     ) {
         if (requestCode == LOCATION_PERMISSION_REQUEST) {
             if (grantResults.contains(PackageManager.PERMISSION_GRANTED)) {
-
                 Toast.makeText(this, "Permission granted", Toast.LENGTH_LONG).show()
-
-                if (ActivityCompat.checkSelfPermission(
-                        this,
-                        ACCESS_FINE_LOCATION
-                    ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
+                if (ActivityCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) != PackageManager
+                                .PERMISSION_GRANTED && ActivityCompat.checkSelfPermission
+                        (this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
                     return
                 }
+                //Setting the location permission true
                 map.isMyLocationEnabled = true
-
             }
             else {
                 Toast.makeText(
@@ -120,12 +106,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 
+    //getting location
     private fun getLocationUpdates() {
         locationRequest = LocationRequest()
         locationRequest.interval = 3000
         locationRequest.fastestInterval = 4000
         locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
 
+        //Handling Callback
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 if (locationResult.locations.isNotEmpty()) {
@@ -136,10 +124,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                             Toast.makeText(applicationContext,"Error occurred while writing the locations", Toast.LENGTH_LONG).show()
                         }
                     if (location != null) {
-                        map.clear()
+                        //Clear the positon before inserting another
+//                        map.clear()
                         val latLng = LatLng(location.latitude, location.longitude)
-                        val markerOptions1  =map.addMarker(MarkerOptions().position(latLng).title("Mr Femi")
-                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)) )
+                        val markerOptions1  = map.addMarker(MarkerOptions().position(latLng).title("Mr Femi").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)) )
                         markerOptions1?.position = latLng
                         map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20f))
                     }
@@ -148,15 +136,18 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-
-
+    //Loading the map
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
+        //get location access
         getLocationAccess()
+        //get the location update
         getLocationUpdates()
+        //
         startLocationUpdates()
         showSettingAlert()
     }
+
 
     private fun startLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
@@ -164,6 +155,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return
         }
+
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
     }
 
@@ -175,20 +167,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         override fun onDataChange(dataSnapshot: DataSnapshot) {
             if (dataSnapshot.exists()) {
 
-                val locationlogging = dataSnapshot.child("DennisLocation").getValue(LocationLogging::class.java)
-                var driverLat=locationlogging?.Latitude
-                var driverLong=locationlogging?.Longitude
-                //Log.d("Latitude of driver", driverLat.toString())
-                //    Log.d("Longitude read from database", driverLong.toString())
-
-                if (driverLat !=null  && driverLong != null) {
-                    val driverLoc = LatLng(driverLat, driverLong)
+                //Getting partner location
+                val locationlogging = dataSnapshot.child("DennisLocation").getValue(PartnerLocationModel::class.java)
+                var partnersLocation=locationlogging?.Latitude
+                var partnerPositionModel=locationlogging?.Longitude
+                if (partnersLocation !=null  && partnerPositionModel != null) {
+                    map.clear()
+                    val driverLoc = LatLng(partnersLocation, partnerPositionModel)
                     val markerOptions2 = map.addMarker(MarkerOptions().position(driverLoc).title("Mr Dennis")
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)))
-
                     markerOptions2?.position = driverLoc
                     map.animateCamera(CameraUpdateFactory.newLatLngZoom(driverLoc, 20f))
-                    Toast.makeText(applicationContext, "Locations accessed from the database", Toast.LENGTH_LONG).show()
                 }
             }
         }
